@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flight Test Pinger</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f2f4f8; --surf:#fff; --s2:#f0f2f6; --bdr:#dde1ea;
+  --tx:#1a1d26; --tx2:#6b7280; --ac:#2563eb; --al:#eff4ff; --ab:#bfdbfe;
+  --ok:#16a34a; --okbg:#f0fdf4; --okb:#86efac; --warn:#d97706; --red:#dc2626;
+  --mono:'Share Tech Mono',monospace; --sans:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--sans);background:var(--bg);color:var(--tx);padding:0 0 60px;max-width:640px;margin:0 auto}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:12px;padding:20px 16px 0}
+.logo{width:38px;height:38px;background:var(--ac);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo svg{width:22px;height:22px;fill:white}
+header h1{font-size:17px;font-weight:600}
+header p{font-size:12px;color:var(--tx2);margin-top:2px}
+
+/* TABS */
+.tabs{display:flex;gap:0;margin:16px 16px 0;border-radius:10px;overflow:hidden;border:1px solid var(--bdr);background:var(--s2)}
+.tab{flex:1;padding:10px;font-size:13px;font-weight:500;text-align:center;cursor:pointer;border:none;background:none;font-family:var(--sans);color:var(--tx2);transition:all .15s}
+.tab.active{background:var(--surf);color:var(--ac);font-weight:600}
+
+/* CARD */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.05);margin:14px 16px 0;overflow:hidden}
+.cb{padding:18px 20px}
+.lbl{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--tx2);margin-bottom:14px}
+
+/* TIMER */
+.tw{text-align:center;padding:26px 20px 6px}
+.ml{font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--tx2);margin-bottom:10px}
+#clock{font-family:var(--mono);font-size:clamp(38px,10vw,54px);line-height:1;letter-spacing:2px;transition:color .2s}
+#clock.run{color:var(--ac)} #clock.ping{color:var(--warn)!important}
+.flash{font-size:13px;font-weight:600;color:var(--warn);margin-top:10px;min-height:22px;transition:opacity .3s}
+.active-profile-bar{font-size:12px;color:var(--tx2);margin-top:6px;min-height:18px}
+.active-profile-bar strong{color:var(--ac)}
+
+/* NEXT BAR */
+.nw{margin:14px 20px 0;display:none}
+.nr{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:6px}
+.nr strong{color:var(--tx)}
+.bt{height:4px;border-radius:4px;background:var(--s2);overflow:hidden}
+.bfill{height:100%;border-radius:4px;background:var(--ac);width:0%;transition:width .1s linear}
+
+/* BUTTONS */
+.cr{display:flex;gap:10px;padding:16px 20px 20px;border-top:1px solid var(--bdr)}
+button{font-family:var(--sans);font-size:14px;font-weight:500;border:none;cursor:pointer;border-radius:9px;padding:11px 20px;transition:all .15s;line-height:1}
+button:active{transform:scale(.96)}
+.bp{background:var(--ac);color:#fff;flex:1} .bp:hover{background:#1d4ed8}
+.bs{background:var(--s2);color:var(--tx);border:1px solid var(--bdr);flex:1} .bs:hover{background:#e4e7ef}
+.bg{background:none;color:var(--tx2);border:1px solid var(--bdr);padding:11px 16px} .bg:hover{background:var(--s2)}
+.bred{background:#fee2e2;color:var(--red);border:1px solid #fecaca} .bred:hover{background:#fecaca}
+
+/* VOLUME */
+.vr{display:flex;align-items:center;gap:12px;padding:12px 20px 16px;border-top:1px solid var(--bdr)}
+.vr input[type=range]{flex:1;accent-color:var(--ac);cursor:pointer}
+.vv{font-family:var(--mono);font-size:12px;color:var(--tx2);min-width:32px;text-align:right}
+.btest{background:var(--s2);border:1px solid var(--bdr);color:var(--tx);font-size:12px;padding:7px 12px;border-radius:7px;flex-shrink:0}
+
+/* PROFILE LIST */
+.profile-list{display:flex;flex-direction:column;gap:8px}
+.profile-card{border:1px solid var(--bdr);border-radius:10px;overflow:hidden;background:var(--surf)}
+.profile-card.selected{border-color:var(--ac);box-shadow:0 0 0 2px var(--al)}
+.profile-head{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+.profile-head:hover{background:var(--s2)}
+.profile-dot{width:10px;height:10px;border-radius:50%;background:var(--bdr);flex-shrink:0;transition:background .2s}
+.profile-card.selected .profile-dot{background:var(--ac)}
+.profile-name{font-weight:600;font-size:14px;flex:1}
+.profile-meta{font-size:12px;color:var(--tx2)}
+.profile-actions{display:flex;gap:6px;margin-left:4px}
+.pbtn{background:var(--s2);border:1px solid var(--bdr);color:var(--tx);font-size:12px;padding:5px 10px;border-radius:7px;cursor:pointer;font-family:var(--sans)}
+.pbtn:hover{background:#e4e7ef}
+.pbtn.active-btn{background:var(--ac);color:#fff;border-color:var(--ac)}
+.pbtn.del-btn{color:var(--red)} .pbtn.del-btn:hover{background:#fee2e2;border-color:#fecaca}
+.profile-pings{padding:0 14px 12px;display:none;border-top:1px solid var(--bdr)}
+.profile-card.open .profile-pings{display:block}
+.profile-card.open .profile-head{background:var(--s2)}
+
+/* ADD PING ROW */
+.ar{display:flex;gap:8px;align-items:center;margin:12px 0 10px}
+.tbox{display:flex;align-items:center;gap:2px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;padding:0 8px;flex-shrink:0}
+.tbox span{font-family:var(--mono);font-size:13px;color:var(--tx2);user-select:none}
+.tbox input{font-family:var(--mono);font-size:17px;background:transparent;border:none;outline:none;text-align:center;color:var(--tx);padding:8px 0;-moz-appearance:textfield}
+.tbox input::-webkit-inner-spin-button,.tbox input::-webkit-outer-spin-button{-webkit-appearance:none}
+.fw{width:40px} .fw2{width:32px} .fw3{width:44px}
+.ni{flex:1;min-width:0;font-size:13px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;padding:9px 12px;outline:none;color:var(--tx);transition:border-color .15s}
+.ni:focus{border-color:var(--ac);background:var(--al)}
+.badd{background:var(--ac);color:#fff;border-radius:9px;padding:9px 14px;font-size:20px;line-height:1;flex-shrink:0} .badd:hover{background:#1d4ed8}
+
+/* PING ITEMS */
+.pl{display:flex;flex-direction:column;gap:5px}
+.pi{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2)}
+.pi.nx{border-color:var(--ac);background:var(--al)}
+.pi.dn{border-color:var(--okb);background:var(--okbg);opacity:.7}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bdr);flex-shrink:0}
+.pi.nx .dot{background:var(--ac);animation:blink 1s infinite}
+.pi.dn .dot{background:var(--ok)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.pt{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--tx);min-width:88px}
+.pi.nx .pt{color:var(--ac)} .pi.dn .pt{color:var(--ok)}
+.pn{flex:1;font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nbadge{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ac);background:#dbeafe;border:1px solid var(--ab);border-radius:4px;padding:2px 6px;flex-shrink:0}
+.dbadge{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ok);background:var(--okbg);border:1px solid var(--okb);border-radius:4px;padding:2px 6px;flex-shrink:0}
+.bdel{background:none;border:none;cursor:pointer;color:#ccc;font-size:15px;padding:2px 4px;border-radius:4px;line-height:1;flex-shrink:0}
+.bdel:hover{color:var(--red);background:#fee2e2}
+.pi.dn .bdel{visibility:hidden}
+.empty{text-align:center;padding:20px 0 4px;color:var(--tx2);font-size:13px}
+
+/* NEW PROFILE FORM */
+.new-profile-row{display:flex;gap:8px;margin-bottom:0}
+.new-profile-row input{flex:1;font-size:14px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;outline:none;color:var(--tx);font-family:var(--sans)}
+.new-profile-row input:focus{border-color:var(--ac);background:var(--al)}
+
+/* LOG */
+.ll{display:flex;flex-direction:column;gap:5px;max-height:180px;overflow-y:auto}
+.le{display:flex;gap:12px;align-items:center;padding:7px 10px;border-radius:7px;background:var(--s2);font-family:var(--mono);font-size:13px}
+.lm{color:var(--ac);min-width:94px} .ln{color:var(--tx);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .lw{color:var(--tx2);font-size:11px;flex-shrink:0}
+.elog{font-size:13px;color:var(--tx2);font-style:italic;padding:4px 0}
+
+/* PAGE VIEWS */
+.page{display:none} .page.active{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 1 1 0 10A5 5 0 0 1 12 2zm0 12c5.33 0 8 2.67 8 4v2H4v-2c0-1.33 2.67-4 8-4z"/></svg></div>
+  <div><h1>Flight Test Input Pinger</h1><p>MET Timer &middot; Test Profiles &middot; Scheduled Cues</p></div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showPage('timer')">&#9654; Timer</button>
+  <button class="tab" onclick="showPage('profiles')">&#128193; Profiles</button>
+  <button class="tab" onclick="showPage('log')">&#128203; Log</button>
+</div>
+
+<!-- TIMER PAGE -->
+<div class="page active" id="page-timer">
+  <div class="card">
+    <div class="tw">
+      <div class="ml">Mission Elapsed Time (MET)</div>
+      <div id="clock">T+00:00.000</div>
+      <div class="active-profile-bar" id="activeBar">No profile selected</div>
+      <div class="flash" id="flash" style="opacity:0">&nbsp;</div>
+    </div>
+    <div class="nw" id="nw">
+      <div class="nr"><span>Next: <strong id="nxtName">-</strong></span><span>In <strong id="nxtIn">-</strong></span></div>
+      <div class="bt"><div class="bfill" id="bf"></div></div>
+    </div>
+    <div class="cr">
+      <button class="bp" id="btnStart" onclick="startTimer()">&#9654; Start</button>
+      <button class="bs" id="btnPause" onclick="pauseTimer()" style="display:none">&#9646;&#9646; Pause</button>
+      <button class="bs" id="btnResume" onclick="resumeTimer()" style="display:none">&#9654; Resume</button>
+      <button class="bg" onclick="resetTimer()">&#8635;</button>
+    </div>
+    <div class="vr">
+      <span style="font-size:16px;color:var(--tx2)">&#128266;</span>
+      <input type="range" id="vol" min="0" max="1" step="0.05" value="0.75" oninput="updateVol()">
+      <span class="vv" id="vv">75%</span>
+      <button class="btest" onclick="testChime()">Test &#9835;</button>
+    </div>
+  </div>
+
+  <!-- Active profile ping list (runtime view) -->
+  <div class="card" id="runtimeCard" style="display:none">
+    <div class="cb">
+      <div class="lbl" id="runtimeLabel">Ping Schedule</div>
+      <div class="pl" id="runtimeList"></div>
+    </div>
+  </div>
+
+  <div class="card" id="noProfileCard">
+    <div class="cb" style="text-align:center;padding:28px 20px;color:var(--tx2);font-size:14px">
+      <div style="font-size:28px;margin-bottom:8px">&#128193;</div>
+      Go to <strong>Profiles</strong> to create a test, then activate it here.
+    </div>
+  </div>
+</div>
+
+<!-- PROFILES PAGE -->
+<div class="page" id="page-profiles">
+  <div class="card">
+    <div class="cb">
+      <div class="lbl">New Profile</div>
+      <div class="new-profile-row">
+        <input type="text" id="newProfileName" placeholder="e.g. Doublet, 3211, Step Input..." maxlength="40">
+        <button class="bp" style="flex:0 0 auto;padding:11px 18px" onclick="createProfile()">+ Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="profileListWrap">
+    <!-- profiles rendered here -->
+  </div>
+</div>
+
+<!-- LOG PAGE -->
+<div class="page" id="page-log">
+  <div class="card">
+    <div class="cb">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="lbl" style="margin-bottom:0">Ping Log</div>
+        <button class="bg" style="font-size:12px;padding:5px 10px" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="ll" id="loglist"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+var profiles = [];       // [{id, name, pings:[{id,trigMs,note,fired}]}]
+var activeProfileId = null;
+var elapsed = 0;
+var epoch = null;
+var tid = null;
+var running = false;
+var vol = 0.75;
+var logEntries = [];
+var seq = 0;
+var actx = null;
+var flashTimer = null;
+
+// ── PERSIST ──
+function save() {
+  try {
+    var data = {profiles: profiles, activeProfileId: activeProfileId, vol: vol, seq: seq};
+    localStorage.setItem('ftpinger', JSON.stringify(data));
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    var raw = localStorage.getItem('ftpinger');
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    profiles = data.profiles || [];
+    activeProfileId = data.activeProfileId || null;
+    vol = data.vol || 0.75;
+    seq = data.seq || 0;
+    document.getElementById('vol').value = vol;
+    document.getElementById('vv').textContent = Math.round(vol * 100) + '%';
+  } catch(e) {}
+}
+
+// ── AUDIO ──
+function getCtx() {
+  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+  return actx;
+}
+function doChime(c, v) {
+  var now = c.currentTime;
+  var tones = [[880, 0.7, 1.4], [1320, 0.35, 1.0]];
+  for (var i = 0; i < tones.length; i++) {
+    var f = tones[i][0], a = tones[i][1], d = tones[i][2];
+    var o = c.createOscillator(), g = c.createGain();
+    o.connect(g); g.connect(c.destination);
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(v * a, now + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, now + d);
+    o.start(now); o.stop(now + d + 0.1);
+  }
+}
+function playChime(v) {
+  var c = getCtx();
+  if (c.state === 'suspended') { c.resume().then(function(){ doChime(c, v); }); }
+  else { doChime(c, v); }
+}
+function testChime() {
+  var c = getCtx();
+  if (c.state === 'suspended') { c.resume().then(function(){ doChime(c, vol); }); }
+  else { doChime(c, vol); }
+  showFlash('&#9679; TEST PING');
+}
+function updateVol() {
+  vol = parseFloat(document.getElementById('vol').value);
+  document.getElementById('vv').textContent = Math.round(vol * 100) + '%';
+  save();
+}
+
+// ── FORMAT ──
+function p2(n) { return ('0' + Math.floor(n)).slice(-2); }
+function p3(n) { return ('00' + Math.floor(n)).slice(-3); }
+function fMET(ms) {
+  var s = ms / 1000;
+  return 'T+' + p2(Math.floor(s/60)) + ':' + p2(Math.floor(s%60)) + '.' + p3(ms%1000);
+}
+function fAbs(tms) {
+  var s = Math.floor(tms/1000), ms = tms%1000;
+  if (ms > 0) return 'T+' + p2(Math.floor(s/60)) + ':' + p2(s%60) + '.' + p3(ms);
+  return 'T+' + p2(Math.floor(s/60)) + ':' + p2(s%60);
+}
+function fDelta(ms) {
+  ms = Math.max(0, ms);
+  var s = Math.ceil(ms/1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s/60) + 'm ' + (s%60) + 's';
+}
+function fWall() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+function esc(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── PAGE NAV ──
+var currentPage = 'timer';
+function showPage(name) {
+  var pages = ['timer','profiles','log'];
+  for (var i = 0; i < pages.length; i++) {
+    document.getElementById('page-' + pages[i]).className = 'page' + (pages[i] === name ? ' active' : '');
+  }
+  var tabs = document.querySelectorAll('.tab');
+  var idx = pages.indexOf(name);
+  for (var j = 0; j < tabs.length; j++) {
+    tabs[j].className = 'tab' + (j === idx ? ' active' : '');
+  }
+  currentPage = name;
+  if (name === 'log') renderLog();
+  if (name === 'profiles') renderProfileList();
+}
+
+// ── TIMER ──
+function getActiveProfile() {
+  if (!activeProfileId) return null;
+  for (var i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === activeProfileId) return profiles[i];
+  }
+  return null;
+}
+
+function startTimer() {
+  getCtx();
+  running = true;
+  epoch = Date.now() - elapsed;
+  tid = setInterval(tick, 10);
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnPause').style.display = '';
+  document.getElementById('btnResume').style.display = 'none';
+}
+function pauseTimer() {
+  if (!running) return;
+  running = false;
+  clearInterval(tid);
+  document.getElementById('clock').className = '';
+  document.getElementById('btnPause').style.display = 'none';
+  document.getElementById('btnResume').style.display = '';
+}
+function resumeTimer() {
+  epoch = Date.now() - elapsed;
+  running = true;
+  tid = setInterval(tick, 10);
+  document.getElementById('btnPause').style.display = '';
+  document.getElementById('btnResume').style.display = 'none';
+}
+function resetTimer() {
+  clearInterval(tid);
+  running = false; elapsed = 0;
+  // reset fired flags on active profile
+  var p = getActiveProfile();
+  if (p) {
+    for (var i = 0; i < p.pings.length; i++) p.pings[i].fired = false;
+  }
+  var cl = document.getElementById('clock');
+  cl.textContent = 'T+00:00.000'; cl.className = '';
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnPause').style.display = 'none';
+  document.getElementById('btnResume').style.display = 'none';
+  document.getElementById('nw').style.display = 'none';
+  document.getElementById('flash').style.opacity = 0;
+  renderRuntimePings();
+}
+
+function tick() {
+  elapsed = Date.now() - epoch;
+  var cl = document.getElementById('clock');
+  cl.textContent = fMET(elapsed);
+  if (cl.className !== 'ping') cl.className = 'run';
+
+  var p = getActiveProfile();
+  if (!p) return;
+
+  var changed = false;
+  for (var i = 0; i < p.pings.length; i++) {
+    var ping = p.pings[i];
+    if (!ping.fired && elapsed >= ping.trigMs) {
+      ping.fired = true;
+      playChime(vol);
+      var lbl = ping.note || fAbs(ping.trigMs);
+      showFlash('&#9679; PING &nbsp; ' + lbl);
+      logEntries.unshift({m: fMET(elapsed), n: lbl, w: fWall(), profile: p.name});
+      changed = true;
+    }
+  }
+  if (changed) { renderRuntimePings(); save(); }
+
+  // next ping bar
+  var pending = [];
+  for (var j = 0; j < p.pings.length; j++) {
+    if (!p.pings[j].fired) pending.push(p.pings[j]);
+  }
+  pending.sort(function(a,b){ return a.trigMs - b.trigMs; });
+  var nw = document.getElementById('nw');
+  if (pending.length === 0) { nw.style.display = 'none'; return; }
+  nw.style.display = '';
+  var nxt = pending[0];
+  var delta = nxt.trigMs - elapsed;
+  var fromMs = 0;
+  for (var k = 0; k < p.pings.length; k++) {
+    if (p.pings[k].fired && p.pings[k].trigMs <= nxt.trigMs && p.pings[k].trigMs > fromMs) {
+      fromMs = p.pings[k].trigMs;
+    }
+  }
+  var span = nxt.trigMs - fromMs;
+  var prog = span > 0 ? Math.min(1, (elapsed - fromMs) / span) : 1;
+  document.getElementById('nxtName').textContent = nxt.note || fAbs(nxt.trigMs);
+  document.getElementById('nxtIn').textContent = fDelta(delta);
+  document.getElementById('bf').style.width = (prog * 100) + '%';
+}
+
+function showFlash(html) {
+  var el = document.getElementById('flash'), cl = document.getElementById('clock');
+  el.innerHTML = html; el.style.opacity = 1; cl.className = 'ping';
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(function(){
+    el.style.opacity = 0;
+    cl.className = running ? 'run' : '';
+  }, 2200);
+}
+
+// ── ACTIVE PROFILE ──
+function activateProfile(id) {
+  // stop and reset timer first
+  clearInterval(tid);
+  running = false; elapsed = 0;
+  document.getElementById('clock').textContent = 'T+00:00.000';
+  document.getElementById('clock').className = '';
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnPause').style.display = 'none';
+  document.getElementById('btnResume').style.display = 'none';
+  document.getElementById('nw').style.display = 'none';
+  document.getElementById('flash').style.opacity = 0;
+
+  // reset fired flags on previously active profile
+  var old = getActiveProfile();
+  if (old) { for (var i = 0; i < old.pings.length; i++) old.pings[i].fired = false; }
+
+  activeProfileId = id;
+  // reset fired on new profile too
+  var np = getActiveProfile();
+  if (np) { for (var j = 0; j < np.pings.length; j++) np.pings[j].fired = false; }
+
+  save();
+  updateActiveBar();
+  renderRuntimePings();
+  renderProfileList();
+}
+
+function updateActiveBar() {
+  var p = getActiveProfile();
+  var bar = document.getElementById('activeBar');
+  var rc = document.getElementById('runtimeCard');
+  var npc = document.getElementById('noProfileCard');
+  if (p) {
+    bar.innerHTML = 'Active: <strong>' + esc(p.name) + '</strong>';
+    rc.style.display = '';
+    npc.style.display = 'none';
+  } else {
+    bar.textContent = 'No profile selected';
+    rc.style.display = 'none';
+    npc.style.display = '';
+  }
+}
+
+function renderRuntimePings() {
+  var p = getActiveProfile();
+  var list = document.getElementById('runtimeList');
+  var lbl = document.getElementById('runtimeLabel');
+  list.innerHTML = '';
+  if (!p || p.pings.length === 0) {
+    list.innerHTML = '<div class="empty">No pings in this profile.</div>';
+    return;
+  }
+  lbl.textContent = p.name + ' — Ping Schedule';
+  var sorted = p.pings.slice().sort(function(a,b){ return a.trigMs - b.trigMs; });
+  var nextId = -1;
+  for (var i = 0; i < sorted.length; i++) {
+    if (!sorted[i].fired) { nextId = sorted[i].id; break; }
+  }
+  for (var j = 0; j < sorted.length; j++) {
+    var pg = sorted[j];
+    var isNext = !pg.fired && pg.id === nextId;
+    var cls = pg.fired ? 'pi dn' : isNext ? 'pi nx' : 'pi';
+    var badge = pg.fired ? '<span class="dbadge">&#10003;</span>' : isNext ? '<span class="nbadge">Next</span>' : '';
+    var noteHtml = pg.note ? '<span class="pn">' + esc(pg.note) + '</span>' : '<span class="pn" style="opacity:.4;font-style:italic">—</span>';
+    var row = document.createElement('div');
+    row.className = cls;
+    row.innerHTML = '<div class="dot"></div><span class="pt">' + fAbs(pg.trigMs) + '</span>' + noteHtml + badge;
+    list.appendChild(row);
+  }
+}
+
+// ── PROFILES ──
+function createProfile() {
+  var input = document.getElementById('newProfileName');
+  var name = input.value.trim();
+  if (!name) { input.style.outline = '2px solid var(--red)'; setTimeout(function(){ input.style.outline=''; }, 700); return; }
+  var id = ++seq;
+  profiles.push({id: id, name: name, pings: []});
+  input.value = '';
+  save();
+  renderProfileList();
+}
+
+function deleteProfile(id) {
+  if (!confirm('Delete this profile?')) return;
+  var newProfiles = [];
+  for (var i = 0; i < profiles.length; i++) {
+    if (profiles[i].id !== id) newProfiles.push(profiles[i]);
+  }
+  profiles = newProfiles;
+  if (activeProfileId === id) {
+    activeProfileId = null;
+    updateActiveBar();
+    renderRuntimePings();
+  }
+  save();
+  renderProfileList();
+}
+
+function renameProfile(id) {
+  var name = prompt('Rename profile:');
+  if (!name || !name.trim()) return;
+  for (var i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === id) { profiles[i].name = name.trim(); break; }
+  }
+  save();
+  renderProfileList();
+  updateActiveBar();
+  renderRuntimePings();
+}
+
+function toggleProfileOpen(id) {
+  var el = document.getElementById('pcard-' + id);
+  if (el) el.className = el.className.indexOf('open') >= 0
+    ? el.className.replace(' open','')
+    : el.className + ' open';
+}
+
+function addPingToProfile(pid) {
+  var mRaw  = document.getElementById('pm-'  + pid).value;
+  var sRaw  = document.getElementById('ps-'  + pid).value;
+  var msRaw = document.getElementById('pms-' + pid).value;
+  var nRaw  = document.getElementById('pn-'  + pid).value.trim();
+
+  var m  = mRaw  === '' ? 0 : Math.max(0, parseInt(mRaw, 10)  || 0);
+  var s  = sRaw  === '' ? 0 : Math.min(59, Math.max(0, parseInt(sRaw, 10) || 0));
+  var ms = 0;
+  if (msRaw !== '') {
+    var msStr = msRaw.replace(/\D/g,'');
+    if (msStr.length === 1)      ms = parseInt(msStr, 10) * 100;
+    else if (msStr.length === 2) ms = parseInt(msStr, 10) * 10;
+    else                          ms = parseInt(msStr.slice(0,3), 10);
+    ms = Math.min(999, Math.max(0, ms));
+  }
+  var totalMs = m * 60000 + s * 1000 + ms;
+  if (totalMs <= 0) {
+    var el = document.getElementById('pm-' + pid);
+    el.style.outline = '2px solid var(--red)';
+    setTimeout(function(){ el.style.outline=''; }, 700);
+    return;
+  }
+  for (var i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === pid) {
+      profiles[i].pings.push({id: ++seq, trigMs: totalMs, note: nRaw, fired: false});
+      profiles[i].pings.sort(function(a,b){ return a.trigMs - b.trigMs; });
+      break;
+    }
+  }
+  document.getElementById('pm-'  + pid).value = '';
+  document.getElementById('ps-'  + pid).value = '';
+  document.getElementById('pms-' + pid).value = '';
+  document.getElementById('pn-'  + pid).value = '';
+  document.getElementById('pm-'  + pid).focus();
+  save();
+  renderProfileList();
+  if (activeProfileId === pid) { renderRuntimePings(); }
+}
+
+function removePingFromProfile(pid, pingId) {
+  for (var i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === pid) {
+      var newPings = [];
+      for (var j = 0; j < profiles[i].pings.length; j++) {
+        if (profiles[i].pings[j].id !== pingId) newPings.push(profiles[i].pings[j]);
+      }
+      profiles[i].pings = newPings;
+      break;
+    }
+  }
+  save();
+  renderProfileList();
+  if (activeProfileId === pid) renderRuntimePings();
+}
+
+function renderProfileList() {
+  var wrap = document.getElementById('profileListWrap');
+  wrap.innerHTML = '';
+  if (profiles.length === 0) {
+    var empty = document.createElement('div');
+    empty.style.cssText = 'text-align:center;padding:32px 16px;color:var(--tx2);font-size:14px';
+    empty.innerHTML = '<div style="font-size:28px;margin-bottom:8px">&#128193;</div>No profiles yet. Create one above.';
+    wrap.appendChild(empty);
+    return;
+  }
+  for (var i = 0; i < profiles.length; i++) {
+    var pr = profiles[i];
+    var isActive = pr.id === activeProfileId;
+    var card = document.createElement('div');
+    card.id = 'pcard-' + pr.id;
+    card.className = 'card profile-card' + (isActive ? ' selected' : '');
+    card.style.marginTop = '10px';
+
+    var pingCount = pr.pings.length;
+    var head = '<div class="profile-head" onclick="toggleProfileOpen(' + pr.id + ')">' +
+      '<div class="profile-dot"></div>' +
+      '<span class="profile-name">' + esc(pr.name) + '</span>' +
+      '<span class="profile-meta">' + pingCount + ' ping' + (pingCount !== 1 ? 's' : '') + '</span>' +
+      '<div class="profile-actions">' +
+        '<button class="pbtn' + (isActive ? ' active-btn' : '') + '" onclick="event.stopPropagation();activateProfile(' + pr.id + ')">' + (isActive ? '&#10003; Active' : 'Activate') + '</button>' +
+        '<button class="pbtn" onclick="event.stopPropagation();renameProfile(' + pr.id + ')">Rename</button>' +
+        '<button class="pbtn del-btn" onclick="event.stopPropagation();deleteProfile(' + pr.id + ')">&#10005;</button>' +
+      '</div>' +
+    '</div>';
+
+    // build ping list inside profile
+    var pingRows = '';
+    var sorted = pr.pings.slice().sort(function(a,b){ return a.trigMs - b.trigMs; });
+    for (var j = 0; j < sorted.length; j++) {
+      var pg = sorted[j];
+      var noteHtml = pg.note ? '<span class="pn">' + esc(pg.note) + '</span>' : '<span class="pn" style="opacity:.4;font-style:italic">no label</span>';
+      pingRows += '<div class="pi"><div class="dot"></div><span class="pt">' + fAbs(pg.trigMs) + '</span>' + noteHtml +
+        '<button class="bdel" onclick="removePingFromProfile(' + pr.id + ',' + pg.id + ')">&#10005;</button></div>';
+    }
+    if (!pingRows) pingRows = '<div class="empty">No pings yet. Add one below.</div>';
+
+    var addRow = '<div class="ar">' +
+      '<div class="tbox">' +
+        '<span>T+</span>' +
+        '<input class="fw" type="number" id="pm-' + pr.id + '" min="0" max="999" placeholder="0" inputmode="numeric">' +
+        '<span>:</span>' +
+        '<input class="fw2" type="number" id="ps-' + pr.id + '" min="0" max="59" placeholder="00" inputmode="numeric">' +
+        '<span>.</span>' +
+        '<input class="fw3" type="number" id="pms-' + pr.id + '" min="0" max="999" placeholder="000" inputmode="numeric">' +
+      '</div>' +
+      '<input class="ni" type="text" id="pn-' + pr.id + '" placeholder="Label" maxlength="28">' +
+      '<button class="badd" onclick="addPingToProfile(' + pr.id + ')">+</button>' +
+    '</div>';
+
+    var pingsSection = '<div class="profile-pings"><div class="pl" style="margin-top:12px">' + pingRows + '</div>' + addRow + '</div>';
+
+    card.innerHTML = head + pingsSection;
+    wrap.appendChild(card);
+  }
+}
+
+// ── LOG ──
+function renderLog() {
+  var list = document.getElementById('loglist');
+  list.innerHTML = '';
+  if (logEntries.length === 0) {
+    list.innerHTML = '<div class="elog">No pings fired yet this session.</div>';
+    return;
+  }
+  for (var i = 0; i < logEntries.length; i++) {
+    var e = logEntries[i];
+    var row = document.createElement('div');
+    row.className = 'le';
+    row.innerHTML = '<span class="lm">' + e.m + '</span>' +
+      '<span class="ln">' + esc(e.n) + (e.profile ? ' <span style="opacity:.5">(' + esc(e.profile) + ')</span>' : '') + '</span>' +
+      '<span class="lw">' + e.w + '</span>';
+    list.appendChild(row);
+  }
+}
+function clearLog() { logEntries = []; renderLog(); }
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (!running && document.getElementById('btnResume').style.display !== 'none') resumeTimer();
+    else if (!running) startTimer();
+    else pauseTimer();
+  }
+  if (e.code === 'KeyR') resetTimer();
+});
+
+// ── INIT ──
+document.addEventListener('touchstart', function(){ getCtx(); }, {once:true});
+document.addEventListener('click', function(){ getCtx(); }, {once:true});
+
+load();
+updateActiveBar();
+renderRuntimePings();
+renderProfileList();
+</script>
+</body>
+</html>
